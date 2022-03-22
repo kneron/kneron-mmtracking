@@ -342,6 +342,17 @@ if __name__ == '__main__':
             cfg.model, train_cfg=cfg.train_cfg, test_cfg=cfg.test_cfg)
     else:
         model = build_model(cfg.model)
+        
+    checkpoint_path =args.checkpoint
+    if checkpoint_path!= None:
+        checkpoint = load_checkpoint(model, checkpoint_path, map_location='cpu')
+    if checkpoint_path!= None:
+        if 'CLASSES' in checkpoint.get('meta', {}):
+            model.CLASSES = checkpoint['meta']['CLASSES']
+    model.cpu().eval()        
+        
+        
+        
     model = model.detector
 
 
