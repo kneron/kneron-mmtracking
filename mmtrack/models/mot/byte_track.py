@@ -61,9 +61,12 @@ class ByteTrack(BaseMultiObjectTracker):
         frame_id = img_metas[0].get('frame_id', -1)
         if frame_id == 0:
             self.tracker.reset()
-
-        det_results = self.detector.simple_test(
-            img, img_metas, rescale=rescale)
+        if hasattr(self, '__Kn_ONNX_Sess__'):
+            det_results = self.detector.forward_kneron(
+                img, img_metas, rescale=rescale,tracking=True)
+        else:
+            det_results = self.detector.simple_test(
+                img, img_metas, rescale=rescale)
         assert len(det_results) == 1, 'Batch inference is not supported.'
         bbox_results = det_results[0]
         num_classes = len(bbox_results)
