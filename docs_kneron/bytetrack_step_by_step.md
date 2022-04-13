@@ -1,0 +1,380 @@
+# Step 0. Environment
+
+## Prerequisites
+
+- Python 3.6+
+- PyTorch 1.3+
+- CUDA 9.2+ (If you built PyTorch from source, CUDA 9.0 is also compatible)
+- (Optional, used to build from source) GCC 5+
+- [mmcv-full](https://mmcv.readthedocs.io/en/latest/#installation) (Note: not `mmcv`!)
+
+**Note:** You need to run `pip uninstall mmcv` first if you have `mmcv` installed.
+If mmcv and mmcv-full are both installed, there will be `ModuleNotFoundError`.
+
+
+### Install MMTrackingKN
+
+1. We recommend you installing mmcv-full with pip:
+
+    ```shell
+    pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/{cu_version}/{torch_version}/index.html
+    ```
+
+    Please replace `{cu_version}` and `{torch_version}` in the url to your desired one. For example, to install the `mmcv-full` with `CUDA 10.1` and `PyTorch 1.6.0`, use the following command:
+
+    ```shell
+    pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/cu101/torch1.6.0/index.html
+    ```
+
+    See [here](https://github.com/open-mmlab/mmcv#install-with-pip) for different versions of MMCV compatible to different PyTorch and CUDA versions.
+
+2. Clone the Kneron-version MMDetection (MMDetectionKN) repository.
+
+    ```bash
+    git clone https://github.com/kneron/MMDetectionKN
+    cd MMDetectionKN
+    ```
+
+3. Install required python packages for building MMDetectionKN and then install MMDetectionKN.
+
+    ```shell
+    pip install -r requirements/build.txt
+    pip install -v -e .  # or "python setup.py develop"
+    ```
+
+4. Clone the Kneron-version MMTracking (MMTrackingKN) repository.
+
+    ```bash
+    git clone https://github.com/kneron/MMTrackingKN
+    cd MMTrackingKN
+    ```
+
+5. Install required python packages for building MMTrackingKN and then install MMTrackingKN.
+
+    ```shell
+    pip install -r requirements/build.txt
+    pip install -v -e .  # or "python setup.py develop"
+    ```
+
+# Step 1: Train models on standard datasets 
+
+MMTracking provides tracking models in [Model Zoo](https://github.com/open-mmlab/mmtracking/blob/master/docs/en/model_zoo.md)) and supports several standard datasets like MOT, CrowdHuman, etc. This note demonstrates how to perform common object detection tasks with these existing models and standard datasets, including:
+
+- Use existing trained models to inference on given images.
+- Evaluate existing trained models on standard datasets.
+- Train models on standard datasets.
+
+## Train Bytetrack on MOT dataset
+
+MMTracking provides out-of-the-box tools for training tracking models.
+This section will show how to train models (under [configs](https://github.com/open-mmlab/mmtracking/tree/master/configs/mot)) on MOT.
+
+**Important**: You might need to modify the [config file](https://github.com/open-mmlab/mmtracking/blob/master/docs/en/tutorials/config_mot.md) according your GPUs resource (such as `samples_per_gpu`, `workers_per_gpu` ...etc due to your GPUs RAM limitation).
+The default learning rate in config files is for 8 GPUs and 2 img/gpu (batch size = 8\*2 = 16).
+
+### Step 1-1: Prepare MOT dataset
+
+[MOT](https://motchallenge.net/data/MOT17/) is available on official websites or mirrors.
+We suggest that you download and extract the dataset to somewhere outside the project directory and symlink (`ln`) the dataset root to `$MMTRACKING/data` (`ln -s realpath/to/dataset $MMTracking/data/dataset`), as shown below:
+
+```plain
+mmtracking
+├── mmtrack
+├── tools
+├── configs
+├── data (this folder should be made beforehand)
+│   ├── MOT15/MOT16/MOT17/MOT20 (symlink)
+│   │   ├── train
+│   │   ├── test
+...
+```
+
+It's recommended to *symlink* the dataset folder to mmtracking folder. However, if you place your dataset folder at different place and do not want to symlink, you have to change the corresponding paths in config files (absolute path is recommended).
+
+### Step 1-2: Train Bytetrack on MOT
+
+[ByteTrack: Multi-Object Tracking by Associating Every Detection Box in 2021](https://arxiv.org/abs/2110.06864)
+
+We only need the configuration file (which is provided in `configs/mot/bytetrack/`) to train Bytetrack: 
+```python
+python tools/train.py configs/mot/bytetrack/bytetrack_yolox_s_crowdhuman_mot17-private-half_leaky.py
+```
+* (Note 2) The whole training process might take several days, depending on your computational resource (number of GPUs, etc). If you just want to take a quick look at the deployment flow, we suggest that you download our trained model so you can skip the training process:
+```bash
+mkdir work_dirs
+cd work_dirs
+wget https://github.com/kneron/Model_Zoo/raw/main/mmtracking/bytetrack/latest.zip
+unzip latest.zip
+cd ..
+```
+* (Note 3) This is a "training from scratch" tutorial, which might need lots of time and gpu resource. If you want to train a model on your custom dataset, it is recommended that you read [customize_dataset.md](https://github.com/open-mmlab/mmtracking/blob/master/docs/en/tutorials/customize_dataset.md).
+
+# Step 2: Test trained pytorch model
+`tools/test_kneron.py` is a script that generates inference results from test set with our pytorch model(or onnx model) and evaluates the results to see if our pytorch model(or onnx model) is well trained (if `--eval` argument is given). Note that it's always good to evluate our pytorch model before deploying it.
+
+```python
+python tools/test_kneron.py \
+    configs/mot/bytetrack/bytetrack_yolox_s_crowdhuman_mot17-private-half_leaky_640.py \
+    work_dirs/latest.pth \
+    --eval bbox \
+    --out results.pkl
+```
+* `configs/mot/bytetrack/bytetrack_yolox_s_crowdhuman_mot17-private-half_leaky_640.py` is your bytetrack training config
+* `work_dirs/latest.pth` is your trained bytetrack model
+
+The expected result of the command above will be something similar to the following text (the numbers may slightly differ):
+```plain
+...
++------------+--------+--------+--------+-------+
+| class      | gts    | dets   | recall | ap    |
++------------+--------+--------+--------+-------+
+| pedestrian | 161664 | 387000 | 0.875  | 0.824 |
++------------+--------+--------+--------+-------+
+| mAP        |        |        |        | 0.824 |
++------------+--------+--------+--------+-------+
+{'mAP': 0.824}
+...
+```
+
+# Step 3: Export onnx
+`tools/deployment/pytorch2onnx_kneron.py` is a script provided by Kneron to help user to convert our trained pth model to kneron-optimized onnx:
+```python
+python tools/deployment/pytorch2onnx_kneron.py \
+    configs/mot/bytetrack/bytetrack_yolox_s_crowdhuman_mot17-private-half_leaky_640.py \
+    work_dirs/bytetrack_yolox_s_crowdhuman_mot17-private-half_leaky/latest.pth \
+    --output-file work_dirs/latest.onnx \
+    --skip-postprocess \
+    --shape 640 640
+```
+* `configs/mot/bytetrack/bytetrack_yolox_s_crowdhuman_mot17-private-half_leaky_640.py` is your bytetrack training config
+* `work_dirs/latest.pth` is your trained bytetrack model
+
+The output onnx should be the same name as `work_dirs/latest.pth` with `.onnx` postfix in the same folder.
+
+# Step 4: Test exported onnx model:
+We use the same script(`tools/test_kneron.py`) in step 2 to test our exported onnx. The only difference is that instead of pytorch model, we use onnx model (`work_dirs/latest.onnx`).
+
+```python
+python tools/test_kneron.py \
+    configs/mot/bytetrack/bytetrack_yolox_s_crowdhuman_mot17-private-half_leaky_640.py \
+    work_dirs/latest.onnx \
+    --eval bbox \
+    --out results.pkl
+```
+* `configs/mot/bytetrack/bytetrack_yolox_s_crowdhuman_mot17-private-half_leaky_640.py` is your bytetrack training config
+* `work_dirs/latest.onnx` is your exported bytetrack onnx model
+
+The expected result of the command above will be something similar to the following text (the numbers may slightly differ):
+```plain
+...
++------------+--------+--------+--------+-------+
+| class      | gts    | dets   | recall | ap    |
++------------+--------+--------+--------+-------+
+| pedestrian | 161664 | 387105 | 0.875  | 0.824 |
++------------+--------+--------+--------+-------+
+| mAP        |        |        |        | 0.824 |
++------------+--------+--------+--------+-------+
+{'mAP': 0.824}
+...
+```
+
+# Step 5: Convert onnx to [NEF](http://doc.kneron.com/docs/#toolchain/manual/#5-nef-workflow) model for Kneron platform
+ 
+### Step 5-1: Install Kneron toolchain docker:
+* Check [document](http://doc.kneron.com/docs/#toolchain/manual/#1-installation)
+
+### Step 5-2: Mout Kneron toolchain docker 
+* Mount a folder (e.g. '/mnt/hgfs/Competition') to toolchain docker container as `/data1`. The converted onnx in Step 3 should be put here. All the toolchain operation should happen in this folder.
+```shell
+sudo docker run --rm -it -v /mnt/hgfs/Competition:/data1 kneron/toolchain:latest
+```
+
+### Step 5-3: Import KTC and other required packages in python shell
+* Here we demonstrate how to go through all Kneron Toolchain (KTC) flow through Python API:
+```python
+import ktc
+import numpy as np
+import os
+import onnx
+from PIL import Image
+```
+
+### Step 5-4: Optimize the onnx model
+```python
+onnx_path = '/data1/latest.onnx'
+m = onnx.load(onnx_path)
+m = ktc.onnx_optimizer.onnx2onnx_flow(m)
+onnx.save(m,'latest.opt.onnx')
+```
+
+### Step 5-5: Configure and load data necessary for ktc, and check if onnx is ok for toolchain
+```python 
+# npu (only) performance simulation
+km = ktc.ModelConfig(20008, "0001", "720", onnx_model=m)
+eval_result = km.evaluate()
+print("\nNpu performance evaluation result:\n" + str(eval_result))
+```
+
+### Step 5-6: Quantize the onnx model
+We [random sampled 50 images from voc dataset](https://www.kneron.com/forum/uploads/112/SMZ3HLBK3DXJ.7z) as quantization data, we have to
+1. Download the data 
+2. Uncompression the data as folder named `voc_data50"`
+3. Put the `voc_data50` into docker mounted folder (the path in docker container should be `/data1/voc_data50`)
+
+The following script will do some preprocess(should be the same as training code) on our quantization data, and put it in a list:
+```python
+import os
+from os import walk
+
+img_list = []
+for (dirpath, dirnames, filenames) in walk("/data1/voc_data50"):
+    for f in filenames:
+        fullpath = os.path.join(dirpath, f)
+        
+        image = Image.open(fullpath)
+        image = image.convert("RGB")
+        image = Image.fromarray(np.array(image)[...,::-1])
+        img_data = np.array(image.resize((640, 640), Image.BILINEAR)) / 256 - 0.5
+        print(fullpath)
+        img_list.append(img_data)
+```
+
+Then perform quantization. The BIE model will be generated at `/data1/output.bie`.
+
+```python
+# fixed-point analysis
+bie_model_path = km.analysis({"input": img_list})
+print("\nFixed-point analysis done. Saved bie model to '" + str(bie_model_path) + "'")
+```
+
+### Step 5-7: Compile
+The final step is to compile the BIE model into an NEF model.
+```python
+# compile
+nef_model_path = ktc.compile([km])
+print("\nCompile done. Saved Nef file to '" + str(nef_model_path) + "'")
+```
+
+You can find the NEF file at `/data1/batch_compile/models_720.nef`. `models_720.nef` is the final compiled model.
+
+
+# Step 6: Run [NEF](http://doc.kneron.com/docs/#toolchain/manual/#5-nef-workflow) model on [KL720 USB accelerator](https://www.kneo.ai/products/hardwares/HW2020122500000007/1) with MMDetectionKN API (Ubuntu only)
+
+Recommend you can read [Kneron PLUS official document](http://doc.kneron.com/docs/#plus_python/#_top) first.
+
+### Step 6-1: Download and Install PLUS python library(.whl)
+* Go to [Kneron education center](https://www.kneron.com/tw/support/education-center/)
+* Scroll down to OpenMMLab Kneron Edition table
+* Select Kneron Plus v1.13.0 (pre-built python library)
+* Your OS version(Ubuntu, Windows, MacOS, Raspberry pi)
+* Download KneronPLUS-1.3.0-py3-none-any_{your_os}.whl
+* unzip downloaded `KneronPLUS-1.3.0-py3-none-any.whl.zip`
+* pip install KneronPLUS-1.3.0-py3-none-any.whl
+
+### Step 6-2: Run NEF on [KL720 USB accelerator](https://www.kneo.ai/products/hardwares/HW2020122500000007/1) with MMDetectionKN API (Ubuntu only)
+
+RUN the following python script (change `/PATH/TO/YOUR/720_NEF_MODEL.nef` and `/PATH/TO/YOUR/IMAGE.bmp` and `configs/yolox/yolox_s_8x8_300e_coco_img_norm.py` to yours)
+
+```python
+from mmdet.apis import (inference_detector_kn, init_detector, show_result_pyplot)
+from mmdet.models import build_detector
+import kp
+
+config_file = 'configs/yolox/yolox_s_8x8_300e_coco_img_norm.py'
+model = init_detector(config_file, device='cpu')
+
+device_group = kp.core.connect_devices(usb_port_ids=[0])
+model_nef_descriptor = kp.core.load_model_from_file(device_group=device_group,
+                                                            file_path='/PATH/TO/YOUR/720_NEF_MODEL.nef')
+generic_raw_image_header = kp.GenericRawImageHeader(
+    model_id=model_nef_descriptor.models[0].id,
+    resize_mode=kp.ResizeMode.KP_RESIZE_ENABLE,
+    padding_mode=kp.PaddingMode.KP_PADDING_CORNER,
+    normalize_mode=kp.NormalizeMode.KP_NORMALIZE_KNERON,
+    inference_number=0
+)
+kp_params = {
+    'device_group' : device_group,
+    'model_nef_descriptor': model_nef_descriptor,
+    'generic_raw_image_header': generic_raw_image_header
+}
+res = inference_detector_kn(model, '/PATH/TO/YOUR/IMAGE.bmp', kneron_plus_params = kp_params)
+
+show_result_pyplot(
+    model,
+     '/PATH/TO/YOUR/IMAGE.bmp',
+    res,
+    score_thr=0.3)
+
+```
+
+# Step 7 (For Kneron AI Competition 2022): Run [NEF](http://doc.kneron.com/docs/#toolchain/manual/#5-nef-workflow) model on [KL720 USB accelerator](https://www.kneo.ai/products/hardwares/HW2020122500000007/1)
+
+Recommend you can read [Kneron PLUS official document](http://doc.kneron.com/docs/#plus_python/#_top) first.
+
+### Step 7-1: Download and Install PLUS python library(.whl)
+* Go to [Kneron education center](https://www.kneron.com/tw/support/education-center/)
+* Scroll down to OpenMMLab Kneron Edition table
+* Select Kneron Plus v1.13.0 (pre-built python library)
+* Your OS version(Ubuntu, Windows, MacOS, Raspberry pi)
+* Download KneronPLUS-1.3.0-py3-none-any_{your_os}.whl
+* unzip downloaded `KneronPLUS-1.3.0-py3-none-any.whl.zip`
+* pip install KneronPLUS-1.3.0-py3-none-any.whl
+
+### Step 7-2: Download YoloX example code
+* Go to [Kneron education center](https://www.kneron.com/tw/support/education-center/)
+* Scroll down to OpenMMLab Kneron Edition table
+* Select MMDetectionKN
+* Download yolox_plus_demo.zip 
+* unzip downloaded `yolox_plus_demo`
+
+### Step 7-3: Test enviroment is ready (require [KL720 USB accelerator](https://www.kneo.ai/products/hardwares/HW2020122500000007/1))
+In `yolox_plus_demo`, we provide a yolo example model and image for quick test. 
+* Plug in [KL720 USB accelerator](https://www.kneo.ai/products/hardwares/HW2020122500000007/1) into your computer USB port
+* Go to the yolox_plus_demo folder
+```bash
+cd /PATH/TO/yolox_plus_demo
+```
+
+* Install required library
+```bash
+pip insall -r requirements.txt
+```
+
+* Run example on [KL720 USB accelerator](https://www.kneo.ai/products/hardwares/HW2020122500000007/1)
+```python
+python KL720DemoGenericInferenceYoloX_BypassHwPreProc.py -img ./000000000536.jpg -nef ./example_yolox_720.nef
+```
+
+Then you can see the inference result is saved as output_000000000536.jpg in the same folder.
+And the expected result of the command above will be something similar to the following text:
+```plain
+...
+[Connect Device]
+ - Success
+[Set Device Timeout]
+ - Success
+[Upload Model]
+ - Success
+[Read Image]
+ - Success
+[Starting Inference Work]
+ - Starting inference loop 1 times
+ - .
+[Retrieve Inference Node Output ]
+ - Success
+[Output Result Image]
+ - Output bounding boxes on 'output_000000000536.jpg'
+(291.7100891113281,135.5036407470703,444.81996459960936,331.6263565063477)
+(86.29214324951171,75.08173713684083,178.1478744506836,331.3882736206055)
+(168.07337951660156,81.79956779479981,274.36656799316404,331.9453491210938)
+...
+```
+
+### Step 7-4: Run your NEF model and your image on [KL720 USB accelerator](https://www.kneo.ai/products/hardwares/HW2020122500000007/1)
+Use the same script in previous step, but now we change the input NEF model path and image to yours
+```bash
+python KL720DemoGenericInferenceYoloX_BypassHwPreProc.py -img /PATH/TO/YOUR_IMAGE.bmp -nef /PATH/TO/YOUR/720_NEF_MODEL.nef
+```
+
+
