@@ -3,7 +3,7 @@ _base_ = [
     '../../_base_/datasets/mot_challenge.py', '../../_base_/default_runtime.py'
 ]
 
-img_scale = (640, 640)
+img_scale = (448, 800)
 samples_per_gpu = 30#4
 
 model = dict(
@@ -15,9 +15,7 @@ model = dict(
         test_cfg=dict(score_thr=0.01, nms=dict(type='nms', iou_threshold=0.7)),
         init_cfg=dict(
             type='Pretrained',
-            checkpoint=  # noqa: E251
-            # 'https://download.openmmlab.com/mmdetection/v2.0/yolox/yolox_x_8x8_300e_coco/yolox_x_8x8_300e_coco_20211126_140254-1ef88d67.pth'  # noqa: E501
-            '/data2/doris/mmdetection20220209/work_dirs/yolox_s_8x8_300e_coco_img_norm2/best_bbox_mAP_epoch_298.pth'
+            checkpoint=  './work_dirs/latest.pth'
         )),
     motion=dict(type='KalmanFilter'),
     tracker=dict(
@@ -71,7 +69,7 @@ test_pipeline = [
             dict(type='RandomFlip'),
             dict(
                 type='Pad',
-                pad_to_square=True,
+                size=img_scale,
                 pad_val=dict(img=(114.0, 114.0, 114.0))),
             dict(type='Normalize', **img_norm_cfg),
             dict(type='ImageToTensor', keys=['img']),
