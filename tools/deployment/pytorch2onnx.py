@@ -11,7 +11,7 @@ from mmcv import Config, DictAction
 
 from mmdet.core.export import build_model_from_cfg, preprocess_example_input
 from mmdet.core.export.model_wrappers import ONNXRuntimeDetector
-
+from mmcv.runner import load_checkpoint
 
 def pytorch2onnx(model,
                  input_img,
@@ -291,6 +291,52 @@ def parse_args():
     args = parser.parse_args()
     return args
 
+def build_model_from_cfg(config_path, checkpoint_path, cfg_options=None):
+    """Build a model from config and load the given checkpoint.
+
+    Args:
+        config_path (str): the OpenMMLab config for the model we want to
+            export to ONNX
+        checkpoint_path (str): Path to the corresponding checkpoint
+
+    Returns:
+        torch.nn.Module: the built model
+    """
+    from mmdet.models import build_detector
+
+    cfg = mmcv.Config.fromfile(config_path)
+    if cfg_options is not None:
+        cfg.merge_from_dict(cfg_options)
+    # import modules from string list.
+    if cfg.get('custom_imports', None):
+        from mmcv.utils import import_modules_from_strings
+        import_modules_from_strings(**cfg['custom_imports'])
+    # set cudnn_benchmark
+    if cfg.get('cudnn_benchmark', False):
+        torch.backends.cudnn.benchmark = True
+    cfg.model.pretrained = None
+    cfg.data.test.test_mode = True
+
+    # build the model
+    cfg.model.train_cfg = None
+    model = build_detector(cfg.model, test_cfg=cfg.get('test_cfg'))
+    if checkpoint_path!= None:
+        checkpoint = load_checkpoint(model, checkpoint_path, map_location='cpu')
+    if checkpoint_path!= None:
+        if 'CLASSES' in checkpoint.get('meta', {}):
+            model.CLASSES = checkpoint['meta']['CLASSES']
+        else:
+            from mmdet.datasets import DATASETS
+            dataset = DATASETS.get(cfg.data.test['type'])
+            assert (dataset is not None)
+            model.CLASSES = dataset.CLASSES
+    else:
+        from mmdet.datasets import DATASETS
+        dataset = DATASETS.get(cfg.data.test['type'])
+        assert (dataset is not None)
+        model.CLASSES = dataset.CLASSES
+    model.cpu().eval()
+    return model
 
 if __name__ == '__main__':
     args = parse_args()
@@ -343,16 +389,15 @@ if __name__ == '__main__':
     else:
         model = build_model(cfg.model)
         
+        
     checkpoint_path =args.checkpoint
     if checkpoint_path!= None:
         checkpoint = load_checkpoint(model, checkpoint_path, map_location='cpu')
     if checkpoint_path!= None:
         if 'CLASSES' in checkpoint.get('meta', {}):
             model.CLASSES = checkpoint['meta']['CLASSES']
-    model.cpu().eval()        
-        
-        
-        
+    model.cpu().eval()
+    
     model = model.detector
 
 
