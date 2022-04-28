@@ -54,6 +54,11 @@ If mmcv and mmcv-full are both installed, there will be `ModuleNotFoundError`.
     pip install -v -e .  # or "python setup.py develop"
     ```
 
+4. Go back to the parent folder
+    ```shell
+    cd ..
+    ```
+
 4. Clone the Kneron-version MMTracking (kneron-mmtracking) repository.
 
     ```bash
@@ -120,7 +125,7 @@ cd ..
 ```
 Then, we only need the configuration file (which is provided in `configs/mot/bytetrack/`) to train Bytetrack: 
 ```python
-python tools/train.py configs/mot/bytetrack/bytetrack_yolox_s_crowdhuman_mot17-private-half_leaky.py
+python tools/train.py configs/mot/bytetrack/bytetrack_yolox_s_crowdhuman_mot17-private-half_kn-train.py
 ```
 * (Note) The whole training process might take several days, depending on your computational resource (number of GPUs, etc). If you just want to take a quick look at the deployment flow, we suggest that you download our trained model so you can skip the training process:
 ```bash
@@ -137,12 +142,12 @@ cd ..
 
 ```python
 python tools/test_kneron.py \
-    configs/mot/bytetrack/bytetrack_yolox_s_crowdhuman_mot17-private-half_leaky_640.py \
+    configs/mot/bytetrack/bytetrack_yolox_s_crowdhuman_mot17-private-half_kn-train.py \
     work_dirs/latest.pth \
     --eval bbox \
     --out results.pkl
 ```
-* `configs/mot/bytetrack/bytetrack_yolox_s_crowdhuman_mot17-private-half_leaky_640.py` is your bytetrack training config
+* `configs/mot/bytetrack/bytetrack_yolox_s_crowdhuman_mot17-private-half_kn-train.py` is your bytetrack training config
 * `work_dirs/latest.pth` is your trained bytetrack model
 
 The expected result of the command above will be something similar to the following text (the numbers may slightly differ):
@@ -151,11 +156,11 @@ The expected result of the command above will be something similar to the follow
 +------------+--------+--------+--------+-------+
 | class      | gts    | dets   | recall | ap    |
 +------------+--------+--------+--------+-------+
-| pedestrian | 161664 | 387000 | 0.875  | 0.824 |
+| pedestrian | 161664 | 344382 | 0.881  | 0.838 |
 +------------+--------+--------+--------+-------+
-| mAP        |        |        |        | 0.824 |
+| mAP        |        |        |        | 0.838 |
 +------------+--------+--------+--------+-------+
-{'mAP': 0.824}
+{'mAP': 0.838}
 ...
 ```
 
@@ -163,13 +168,13 @@ The expected result of the command above will be something similar to the follow
 `tools/deployment/pytorch2onnx_kneron.py` is a script provided by Kneron to help user to convert our trained pth model to kneron-optimized onnx:
 ```python
 python tools/deployment/pytorch2onnx_kneron.py \
-    configs/mot/bytetrack/bytetrack_yolox_s_crowdhuman_mot17-private-half_leaky_640.py \
+    configs/mot/bytetrack/bytetrack_yolox_s_crowdhuman_mot17-private-half_kn-deploy.py \
     work_dirs/latest.pth \
     --output-file work_dirs/latest.onnx \
     --skip-postprocess \
     --shape 448 800
 ```
-* `configs/mot/bytetrack/bytetrack_yolox_s_crowdhuman_mot17-private-half_leaky_640.py` is your bytetrack training config
+* `configs/mot/bytetrack/bytetrack_yolox_s_crowdhuman_mot17-private-half_kn-deploy.py` is your bytetrack deploy config
 * `work_dirs/latest.pth` is your trained bytetrack model
 
 The output onnx should be the same name as `work_dirs/latest.pth` with `.onnx` postfix in the same folder.
@@ -179,12 +184,12 @@ We use the same script(`tools/test_kneron.py`) in step 2 to test our exported on
 
 ```python
 python tools/test_kneron.py \
-    configs/mot/bytetrack/bytetrack_yolox_s_crowdhuman_mot17-private-half_leaky_640.py \
+    configs/mot/bytetrack/bytetrack_yolox_s_crowdhuman_mot17-private-half_kn-deploy.py \
     --checkpoint work_dirs/latest.onnx \
     --eval bbox \
     --out results.pkl
 ```
-* `configs/mot/bytetrack/bytetrack_yolox_s_crowdhuman_mot17-private-half_leaky_640.py` is your bytetrack training config
+* `configs/mot/bytetrack/bytetrack_yolox_s_crowdhuman_mot17-private-half_kn-deploy.py` is your bytetrack deploy config
 * `work_dirs/latest.onnx` is your exported bytetrack onnx model
 
 The expected result of the command above will be something similar to the following text (the numbers may slightly differ):
@@ -193,11 +198,11 @@ The expected result of the command above will be something similar to the follow
 +------------+--------+--------+--------+-------+
 | class      | gts    | dets   | recall | ap    |
 +------------+--------+--------+--------+-------+
-| pedestrian | 161664 | 387105 | 0.875  | 0.824 |
+| pedestrian | 161664 | 344382 | 0.881  | 0.838 |
 +------------+--------+--------+--------+-------+
-| mAP        |        |        |        | 0.824 |
+| mAP        |        |        |        | 0.838 |
 +------------+--------+--------+--------+-------+
-{'mAP': 0.824}
+{'mAP': 0.838}
 ...
 ```
 
