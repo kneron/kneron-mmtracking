@@ -303,7 +303,7 @@ Recommend you can read [Kneron PLUS official document](http://doc.kneron.com/doc
 * unzip downloaded `KneronPLUS-1.3.0-py3-none-any.whl.zip`
 * pip install KneronPLUS-1.3.0-py3-none-any.whl
 
-### Step 7-2: Download YoloX example code
+### Step 7-2: Download ByteTrack example code
 * Go to [Kneron education center](https://www.kneron.com/tw/support/education-center/)
 * Scroll down to OpenMMLab Kneron Edition table
 * Select kneron-mmtracking
@@ -311,7 +311,7 @@ Recommend you can read [Kneron PLUS official document](http://doc.kneron.com/doc
 * unzip downloaded `bytetrack_plus_demo`
 
 ### Step 7-3: Test enviroment is ready (require [KL720 USB accelerator](https://www.kneo.ai/products/hardwares/HW2020122500000007/1))
-In `bytetrack_plus_demo`, we provide a yolo example model and image for quick test. 
+In `bytetrack_plus_demo`, we provide a bytetrack example model and short video for quick test. 
 * Plug in [KL720 USB accelerator](https://www.kneo.ai/products/hardwares/HW2020122500000007/1) into your computer USB port
 * Go to the bytetrack_plus_demo folder
 ```bash
@@ -330,10 +330,10 @@ python KL720DemoGenericInferenceByteTrack_BypassHwPreProc.py -nef ./example_byte
 
 Then you can see the inference result is saved as output_MOT16-03_trim.mp4 in the same folder.
 
-### Step 7-4: Run your NEF model and your image on [KL720 USB accelerator](https://www.kneo.ai/products/hardwares/HW2020122500000007/1)
-Use the same script in previous step, but now we change the input NEF model path and image to yours
+### Step 7-4: Run your NEF model and your video on [KL720 USB accelerator](https://www.kneo.ai/products/hardwares/HW2020122500000007/1)
+Use the same script in previous step, but now we change the input NEF model path and video to yours
 ```bash
-python KL720DemoGenericInferenceYoloX_BypassHwPreProc.py -nef /PATH/TO/YOUR/720_NEF_MODEL.nef -vid /PATH/TO/YOUR_IMAGE.mp4 
+python KL720DemoGenericInferenceYoloX_BypassHwPreProc.py -nef /PATH/TO/YOUR/720_NEF_MODEL.nef -vid /PATH/TO/YOUR_VIDEO.mp4 
 ```
 
 
