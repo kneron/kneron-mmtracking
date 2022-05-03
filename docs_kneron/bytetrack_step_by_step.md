@@ -292,25 +292,38 @@ N/A
 
 # Step 7 (For Kneron AI Competition 2022): Run [NEF](http://doc.kneron.com/docs/#toolchain/manual/#5-nef-workflow) model on [KL720 USB accelerator](https://www.kneo.ai/products/hardwares/HW2020122500000007/1)
 
+[WARNING] Don't do this step in toolchain docker enviroment mentioned in Step 5
+
 Recommend you can read [Kneron PLUS official document](http://doc.kneron.com/docs/#plus_python/#_top) first.
 
 ### Step 7-1: Download and Install PLUS python library(.whl)
 * Go to [Kneron education center](https://www.kneron.com/tw/support/education-center/)
-* Scroll down to OpenMMLab Kneron Edition table
-* Select Kneron Plus v1.13.0 (pre-built python library)
-* Your OS version(Ubuntu, Windows, MacOS, Raspberry pi)
-* Download KneronPLUS-1.3.0-py3-none-any_{your_os}.whl
+* Scroll down to `OpenMMLab Kneron Edition table`
+* Select `Kneron Plus v1.3.0 (pre-built python library, firmware)`
+* Select `python library`
+* Select Your OS version(Ubuntu, Windows, MacOS, Raspberry pi)
+* Download `KneronPLUS-1.3.0-py3-none-any_{your_os}.whl`
 * unzip downloaded `KneronPLUS-1.3.0-py3-none-any.whl.zip`
 * pip install KneronPLUS-1.3.0-py3-none-any.whl
 
-### Step 7-2: Download ByteTrack example code
+### Step 7-2: Download and upgrade KL720 USB accelerator firmware
+* Go to [Kneron education center](https://www.kneron.com/tw/support/education-center/)
+* Scroll down to `OpenMMLab Kneron Edition table`
+* Select `Kneron Plus v1.3.0 (pre-built python library, firmware)`
+* Select `firmware`
+* Download `kl720_frimware.zip (fw_ncpu.bin、fw_scpu.bin)`
+* unzip downloaded `kl720_frimware.zip`
+* upgrade KL720 USB accelerator firmware(fw_ncpu.bin、fw_scpu.bin) by following [document](http://doc.kneron.com/docs/#plus_python/getting_start/), `Sec. 2. Update AI Device to KDP2 Firmware`, `Sec. 2.2 KL720`
+
+### Step 7-3: Download ByteTrack example code
 * Go to [Kneron education center](https://www.kneron.com/tw/support/education-center/)
 * Scroll down to OpenMMLab Kneron Edition table
 * Select kneron-mmtracking
+* Select ByteTrack
 * Download bytetrack_plus_demo.zip 
 * unzip downloaded `bytetrack_plus_demo`
 
-### Step 7-3: Test enviroment is ready (require [KL720 USB accelerator](https://www.kneo.ai/products/hardwares/HW2020122500000007/1))
+### Step 7-4: Test enviroment is ready (require [KL720 USB accelerator](https://www.kneo.ai/products/hardwares/HW2020122500000007/1))
 In `bytetrack_plus_demo`, we provide a bytetrack example model and short video for quick test. 
 * Plug in [KL720 USB accelerator](https://www.kneo.ai/products/hardwares/HW2020122500000007/1) into your computer USB port
 * Go to the bytetrack_plus_demo folder
